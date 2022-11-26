@@ -1,0 +1,331 @@
+Singleton pattern :
+
+1. Singleton with eager initialization :
+
+public class EagerSingleton {
+    private static volatile EagerSingleton instance = new EagerSingleton();
+
+    // private constructor
+    private EagerSingleton() {
+    }
+
+    public static EagerSingleton getInstance() {
+        return instance;
+    }
+}
+
+2. Singleton with lazy initialization :
+
+public final class LazySingleton {
+    private static volatile LazySingleton instance = null;
+
+    // private constructor
+    private LazySingleton() {
+    }
+
+    public static LazySingleton getInstance() {
+        if (instance == null) {
+            synchronized (LazySingleton.class) {
+                instance = new LazySingleton();
+            }
+        }
+        return instance;
+    }
+}
+
+    • On the first invocation, the above method will check if the instance is already created using the instance variable.
+    •     If there is no instance i.e. the instance is null, it will create an instance and will return its
+          reference.
+    •    If the instance is already created, it will simply return the reference of the instance.
+
+But, this method also has its own drawbacks. Let’s see how.
+
+
+
+
+
+
+
+
+Suppose there are two threads T1 and T2. Both come to create the instance and check if “instance==null”.
+
+Now both threads have identified instance variable as null thus they both assume they must create an instance. They sequentially go into a synchronized block and create the instances. In the end, we have two instances in our application.
+
+This error can be solved using double-checked locking. This principle tells us to recheck the instance variable again in a  synchronized block as given below:
+
+   public class LazySingleton {
+    private static volatile LazySingleton instance = null;
+
+    // private constructor
+    private LazySingleton() {
+    }
+
+    public static LazySingleton getInstance() {
+        if (instance == null) {
+            synchronized (LazySingleton.class) {
+                // Double check
+                if (instance == null) {
+                    instance = new LazySingleton();
+                }
+            }
+        }
+        return instance;
+    }
+  }
+
+Above code is the correct implementation of the singleton pattern.
+
+
+Note :
+    • Please be sure to use “volatile” keyword with instance variable otherwise you can run into an out of order write error scenario, where reference of an instance is returned before actually the object is constructed i.e. JVM has only allocated the memory and constructor code is still not executed.
+
+    • In this case, your other thread, which refers to the uninitialized object may throw null pointer exception and can even crash the whole application.
+
+
+
+
+
+
+
+
+3. Singleton with static block initialization :
+
+If you have an idea of the class loading sequence, you can use the fact that static blocks are executed during the loading of a class, even before the constructor is called. We can use this feature in our singleton pattern like this:
+
+public class StaticBlockSingleton {
+    private static final StaticBlockSingleton INSTANCE;
+
+    static {
+        try {
+            INSTANCE = new StaticBlockSingleton();
+        } catch (Exception e) {
+            throw new RuntimeException("Uffff, i was not expecting this!", e);
+        }
+    }
+
+    public static StaticBlockSingleton getInstance() {
+        return INSTANCE;
+    }
+
+    private StaticBlockSingleton() {
+        // ...
+    }
+}
+
+The above code has one drawback. Suppose there are 5 static fields in a class and the application code needs to access only 2 or 3, for which instance creation is not required at all.
+
+So, if we use this static initialization, we will have one instance created though it is required or not.
+
+The next section will overcome this problem.
+
+
+
+4. Singleton with bill pugh solution :
+
+    • Bill Pugh was main force behind the java memory model changes.
+    • His principle “Initialization-on-demand holder idiom” also uses the static block idea, but in a different way.
+    • It suggest to use static inner class.
+
+
+
+
+
+
+
+
+public class BillPughSingleton {
+    private BillPughSingleton() {
+    }
+
+    private static class LazyHolder {
+        private static final BillPughSingleton INSTANCE = new BillPughSingleton();
+    }
+
+    public static BillPughSingleton getInstance() {
+        return LazyHolder.INSTANCE;
+    }
+}
+
+Note :
+
+    • As you can see, until we need an instance, the LazyHolder class will not be initialized until required and you can still use other.
+    • Static members of BillPughSingleton class. This is the solution, i will recommend to use.I have used it in my all projects.
+
+ 5. Singleton using Enum :
+
+This type of implementation employs the use of enum. Enum, as written in the java docs, provided implicit support for thread safety and only one instance is guaranteed.
+
+Java enum singleton is also a good way to have singleton with minimal effort.
+
+public enum EnumSingleton {
+    INSTANCE;
+    public void someMethod(String param) {
+        // some class member
+    }
+}
+
+6. Add readResolve() to Singleton Objects :
+
+By now you must have made your decision about how you would like to implement your singleton. Now let’s see other problems that may arise even in job interviews.
+
+Let’s say your application is distributed and it frequently serializes objects into the file system, only to read them later when required.
+
+Please note that de-serialization always creates a new instance. Let’s understand using an example:
+
+
+
+
+
+
+Our singleton class is:
+
+public class DemoSingleton implements Serializable {
+    private volatile static DemoSingleton instance = null;
+
+    public static DemoSingleton getInstance() {
+        if (instance == null) {
+            instance = new DemoSingleton();
+        }
+        return instance;
+    }
+
+    private int i = 10;
+
+    public int getI() {
+        return i;
+    }
+
+    public void setI(int i) {
+        this.i = i;
+    }
+}
+
+Let’s serialize this class and de-serialize it after making some changes:
+
+public class SerializationTest {
+    static DemoSingleton instanceOne = DemoSingleton.getInstance();
+
+    public static void main(String[] args) {
+        try {
+            // Serialize to a file
+            ObjectOutput out = new ObjectOutputStream(new FileOutputStream(
+                    "filename.ser"));
+            out.writeObject(instanceOne);
+            out.close();
+
+            instanceOne.setI(20);
+
+            // Serialize to a file
+            ObjectInput in = new ObjectInputStream(new FileInputStream(
+                    "filename.ser"));
+            DemoSingleton instanceTwo = (DemoSingleton) in.readObject();
+            in.close();
+
+            System.out.println(instanceOne.getI());
+            System.out.println(instanceTwo.getI());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Output:
+
+20
+10
+
+Unfortunately, both variables have different values of the variable “i”. Clearly, there are two instances of our class.
+So, again we are in the same problem of multiple instances in our application.
+
+To solve this issue, we need to include a readResolve() method in our DemoSingleton class. This method will be invoked when you will de-serialize the object.
+
+Inside of this method, you must return the existing instance to ensure a single instance application wide.
+
+public class DemoSingleton implements Serializable {
+    private volatile static DemoSingleton instance = null;
+
+    public static DemoSingleton getInstance() {
+        if (instance == null) {
+            instance = new DemoSingleton();
+        }
+        return instance;
+    }
+
+    protected Object readResolve() {
+        return instance;
+    }
+
+    private int i = 10;
+
+    public int getI() {
+        return i;
+    }
+
+    public void setI(int i) {
+        this.i = i;
+    }
+}
+
+Now when you execute the class SerializationTest,
+
+
+It will give you correct output :
+20
+20
+
+7. Add serialVersionUId to singleton objects :
+
+So far so good. Untill now, we have solved both of the problems of synchronization and serialization.
+
+Now, we are just one step away from a correct and complete implementation. The only missing part is a serial version id.
+
+This is required in cases where your class structure changes between serialization and deserialization.
+
+A changed class structure will cause the JVM to give an exception in the de-serializing process.
+
+java.io.InvalidClassException: singleton.DemoSingleton; local class incompatible: stream classdesc serialVersionUID = 5026910492258526905,
+local class serialVersionUID = 3597984220566440782
+at java.io.ObjectStreamClass.initNonProxy(Unknown Source)
+at java.io.ObjectInputStream.readNonProxyDesc(Unknown Source)
+at java.io.ObjectInputStream.readClassDesc(Unknown Source)
+at java.io.ObjectInputStream.readOrdinaryObject(Unknown Source)
+at java.io.ObjectInputStream.readObject0(Unknown Source)
+at java.io.ObjectInputStream.readObject(Unknown Source)
+at singleton.SerializationTest.main(SerializationTest.java:24)
+
+This problem can be solved only by adding a unique serial version id to the class. It will prevent the compiler from throwing the exception by telling it that both classes are same, and will load the available instance variables only.
+
+8. Conclusion :
+
+After having discussed so many possible approaches and other possible error cases, I will recommend to you the code template below, to design your singleton class which shall ensure only one instance of a class in the whole application in all above discussed scenarios.
+
+public class DemoSingleton implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private DemoSingleton() {
+        // private constructor
+    }
+
+    private static class DemoSingletonHolder {
+        public static final DemoSingleton INSTANCE = new DemoSingleton();
+    }
+
+    public static DemoSingleton getInstance() {
+        return DemoSingletonHolder.INSTANCE;
+    }
+
+    protected Object readResolve() {
+        return getInstance();
+    }
+}
+I hope this post has enough information to help make you understand the most common approaches for the singleton pattern and
+singleton best practices. Let me know your thoughts.
+
+
+References :
+
+    • https://www.geeksforgeeks.org/singleton-design-pattern/
+    • https://dzone.com/articles/java-singletons-using-enum
