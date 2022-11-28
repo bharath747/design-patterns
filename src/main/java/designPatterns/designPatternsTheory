@@ -1,0 +1,56 @@
+Creational Design Patterns :
+----------------------------
+
+Builder :
+
+ - Builder design pattern is an alternative way to construct complex objects and should be used only when we want to build different
+   types of immutable objects using same object building process.
+
+ - Builder pattern helps us in creating immutable classes with large set of state attributes.
+
+ - If we want to create user object where some fields are optional, then One way it to create more constructors, and another is to loose the immutability
+   and introduce setter methods.
+
+  - Builder pattern will help you to consume additional attributes while retaining the immutability of Use class.
+
+Java Factory Pattern :
+
+  - Factory pattern introduces loose coupling between classes which is the most important principle one should consider and apply while designing the application architecture.
+
+  - Loose coupling can be introduced in application architecture by programming against abstract entities rather than concrete implementations. This not only makes our
+    architecture more flexible but also less fragile.
+
+  - Factory pattern is most suitable where there is some complex object creation steps are involved. To ensure that these steps are centralized and not exposed to
+    composing classes, factory pattern should be used.
+
+  - We can see many realtime examples of factory pattern in JDK itself e.g.
+
+     - java.sql.DriverManager#getConnection()
+     - java.net.URL#openConnection()
+     - java.lang.Class#newInstance()
+     - java.lang.Class#forName()
+
+
+Structural Design Patterns :
+---------------------------
+
+Adapter Design Pattern :
+
+ - An adapter pattern is also known as Wrapper pattern as well. Adapter Design is very useful for the system integration when some other existing
+   components have to be adapted by the existing system without sourcecode modifications.
+
+ - The main use of this pattern is when a class that you need to use doesn’t meet the requirements of an interface.
+
+    e.g. If you want to read the system input through command prompt in java then given below code is common way to do it:
+
+       BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+       System.out.print("Enter String");
+       String s = br.readLine();
+       System.out.print("Enter input: " + s);
+
+      - System.in provides byte stream where BufferedReader expects character stream. InputStreamReader works as a adapter between System.in and BufferedReader.
+
+Bridge Design Pattern :
+
+ - Bridge design pattern is used to decouple a class into two parts – abstraction and it’s implementation so that both can evolve in future without affecting each other.
+   It increases the loose coupling between class abstraction and it’s implementation.
